@@ -50,7 +50,8 @@ if check_password():
 
     # --- 📈 အပိုင်း (၃) : တွက်ချက်ခြင်း နှင့် Dashboard ပြသခြင်း ---
     def load_data():
-        records = sheet.get_all_records()
+        # Google Sheet မှ ကော်မာများ မပါသော မူရင်းဂဏန်းများကိုသာ ဆွဲယူရန် UNFORMATTED_VALUE ကိုသုံးပါသည်
+        records = sheet.get_all_records(value_render_option="UNFORMATTED_VALUE")
         return pd.DataFrame(records)
 
     df = load_data()
@@ -58,7 +59,11 @@ if check_password():
     if not df.empty:
         # Error မတက်စေရန် ကော်လံများ ရှိမရှိ စစ်ဆေးခြင်း
         if "အမျိုးအစား" in df.columns and "ပမာဏ" in df.columns:
-            # ပမာဏကို ဂဏန်းဖြစ်အောင် သေချာပြောင်းပေးခြင်း
+            # (၁) အမျိုးအစား စာသားများတွင် မတော်တဆ ပါသွားသော Space အပိုများကို ရှင်းလင်းခြင်း
+            df["အမျိုးအစား"] = df["အမျိုးအစား"].astype(str).str.strip()
+            
+            # (၂) ပမာဏထဲတွင် ကော်မာ (,) သို့မဟုတ် စာသားများ ပါနေပါက ဖယ်ရှားပြီးမှ ဂဏန်းအဖြစ် ပြောင်းခြင်း
+            df["ပမာဏ"] = df["ပမာဏ"].astype(str).str.replace(",", "").str.replace("Ks", "").str.strip()
             df["ပမာဏ"] = pd.to_numeric(df["ပမာဏ"], errors="coerce").fillna(0)
             
             total_income = df[df["အမျိုးအစား"] == "ဝင်ငွေ"]["ပမာဏ"].sum()
@@ -102,4 +107,4 @@ if check_password():
     if not df.empty:
         st.dataframe(df, use_container_width=True)
     else:
-        st.info("မှတ်တမ်းများ မရှိသေးပါ။")
+        st.info("မှတ်တမ်း
