@@ -104,7 +104,7 @@ if check_password():
 
     st.markdown("---")
     st.subheader("📋 ယခင်စာရင်း မှတ်တမ်းများ")
-    if not df.empty:
+  if not df.empty:
         st.dataframe(df, use_container_width=True)
     else:
-        st.info("မှတ်တမ်း
+        st.info("မှတ်တမ်းများ မရှိသေးပါ။") 
