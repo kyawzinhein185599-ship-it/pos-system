@@ -40,7 +40,7 @@ if check_password():
         
     client = get_gspread_client()
     
-    # ⚠️ မိမိ Google Sheet ရဲ့ နာမည်ကို ဒီနေရာမှာ အတိအကျ ပြောင်းထည့်ရပါမည်
+    # မိမိ Google Sheet ရဲ့ နာမည်ကို ဒီနေရာမှာ အတိအကျ ပြောင်းထည့်ရပါမည်
     SHEET_NAME = "My_POS_Data" 
     try:
         sheet = client.open(SHEET_NAME).sheet1
@@ -56,17 +56,26 @@ if check_password():
     df = load_data()
 
     if not df.empty:
-        total_income = df[df["အမျိုးအစား"] == "ဝင်ငွေ"]["ပမာဏ"].sum()
-        total_expense = df[df["အမျိုးအစား"] == "ထွက်ငွေ"]["ပမာဏ"].sum()
+        # Error မတက်စေရန် ကော်လံများ ရှိမရှိ စစ်ဆေးခြင်း
+        if "အမျိုးအစား" in df.columns and "ပမာဏ" in df.columns:
+            # ပမာဏကို ဂဏန်းဖြစ်အောင် သေချာပြောင်းပေးခြင်း
+            df["ပမာဏ"] = pd.to_numeric(df["ပမာဏ"], errors="coerce").fillna(0)
+            
+            total_income = df[df["အမျိုးအစား"] == "ဝင်ငွေ"]["ပမာဏ"].sum()
+            total_expense = df[df["အမျိုးအစား"] == "ထွက်ငွေ"]["ပမာဏ"].sum()
+        else:
+            st.error("⚠️ Google Sheet တွင် 'အမျိုးအစား' နှင့် 'ပမာဏ' ကော်လံများ မတွေ့ပါ။ ခေါင်းစဉ်များ မှန်ကန်မှုရှိမရှိ စစ်ဆေးပါ။")
+            st.stop()
     else:
-        total_income = total_expense = 0
+        total_income = 0
+        total_expense = 0
         
     balance = total_income - total_expense
 
     col1, col2, col3 = st.columns(3)
-    col1.metric("💰 ဝင်ငွေ စုစုပေါင်း", f"{total_income:,} Ks")
-    col2.metric("📉 ထွက်ငွေ စုစုပေါင်း", f"{total_expense:,} Ks")
-    col3.metric("🏦 လက်ကျန်ငွေ", f"{balance:,} Ks")
+    col1.metric("💰 ဝင်ငွေ စုစုပေါင်း", f"{int(total_income):,} Ks")
+    col2.metric("📉 ထွက်ငွေ စုစုပေါင်း", f"{int(total_expense):,} Ks")
+    col3.metric("🏦 လက်ကျန်ငွေ", f"{int(balance):,} Ks")
     st.markdown("---")
 
     # --- 📝 အပိုင်း (၄) : စာရင်းအသစ် သွင်းခြင်း ---
@@ -82,7 +91,7 @@ if check_password():
             if desc == "" or amount <= 0:
                 st.warning("အကြောင်းအရာနှင့် ပမာဏကို ပြည့်စုံစွာ ထည့်ပါ။")
             else:
-                # Google Sheet ထဲသို့ Data အသစ် လှမ်းထည့်ခြင်း
+                # Google Sheet ထဲသို့ Data အသစ် လှမ်းထည့်ခြင်း (ရက်စွဲ၊ အမျိုးအစား၊ အကြောင်းအရာ၊ ပမာဏ)
                 new_row = [str(t_date), t_type, desc, amount]
                 sheet.append_row(new_row)
                 st.success("✅ စာရင်းကို Google Sheets သို့ အောင်မြင်စွာ သိမ်းဆည်းပြီးပါပြီ!")
