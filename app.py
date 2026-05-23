@@ -7,10 +7,9 @@ from oauth2client.service_account import ServiceAccountCredentials
 # --- 🔒 အပိုင်း (၁) : Login နှင့် Password စနစ် ---
 def check_password():
     def password_entered():
-        # Streamlit ၏ လုံခြုံသော Secrets ထဲမှ Password နှင့် တိုက်စစ်ဆေးခြင်း
         if st.session_state["password"] == st.secrets["app_password"]:
             st.session_state["password_correct"] = True
-            del st.session_state["password"] # Password ကို မှတ်မထားရန် ဖျက်ပစ်ခြင်း
+            del st.session_state["password"]
         else:
             st.session_state["password_correct"] = False
 
@@ -32,7 +31,6 @@ if check_password():
     # --- ☁️ အပိုင်း (၂) : Google Sheets ဖြင့် ချိတ်ဆက်ခြင်း ---
     @st.cache_resource
     def get_gspread_client():
-        # Secrets ထဲမှ Google Cloud JSON Key ကို ယူပြီး ချိတ်ဆက်ခြင်း
         credentials_dict = dict(st.secrets["gcp_service_account"])
         scope = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
         creds = ServiceAccountCredentials.from_json_keyfile_dict(credentials_dict, scope)
@@ -40,7 +38,6 @@ if check_password():
         
     client = get_gspread_client()
     
-    # မိမိ Google Sheet ရဲ့ နာမည်ကို ဒီနေရာမှာ အတိအကျ ပြောင်းထည့်ရပါမည်
     SHEET_NAME = "My_POS_Data" 
     try:
         sheet = client.open(SHEET_NAME).sheet1
@@ -50,19 +47,14 @@ if check_password():
 
     # --- 📈 အပိုင်း (၃) : တွက်ချက်ခြင်း နှင့် Dashboard ပြသခြင်း ---
     def load_data():
-        # Google Sheet မှ ကော်မာများ မပါသော မူရင်းဂဏန်းများကိုသာ ဆွဲယူရန် UNFORMATTED_VALUE ကိုသုံးပါသည်
         records = sheet.get_all_records(value_render_option="UNFORMATTED_VALUE")
         return pd.DataFrame(records)
 
     df = load_data()
 
     if not df.empty:
-        # Error မတက်စေရန် ကော်လံများ ရှိမရှိ စစ်ဆေးခြင်း
         if "အမျိုးအစား" in df.columns and "ပမာဏ" in df.columns:
-            # (၁) အမျိုးအစား စာသားများတွင် မတော်တဆ ပါသွားသော Space အပိုများကို ရှင်းလင်းခြင်း
             df["အမျိုးအစား"] = df["အမျိုးအစား"].astype(str).str.strip()
-            
-            # (၂) ပမာဏထဲတွင် ကော်မာ (,) သို့မဟုတ် စာသားများ ပါနေပါက ဖယ်ရှားပြီးမှ ဂဏန်းအဖြစ် ပြောင်းခြင်း
             df["ပမာဏ"] = df["ပမာဏ"].astype(str).str.replace(",", "").str.replace("Ks", "").str.strip()
             df["ပမာဏ"] = pd.to_numeric(df["ပမာဏ"], errors="coerce").fillna(0)
             
@@ -96,7 +88,6 @@ if check_password():
             if desc == "" or amount <= 0:
                 st.warning("အကြောင်းအရာနှင့် ပမာဏကို ပြည့်စုံစွာ ထည့်ပါ။")
             else:
-                # Google Sheet ထဲသို့ Data အသစ် လှမ်းထည့်ခြင်း (ရက်စွဲ၊ အမျိုးအစား၊ အကြောင်းအရာ၊ ပမာဏ)
                 new_row = [str(t_date), t_type, desc, amount]
                 sheet.append_row(new_row)
                 st.success("✅ စာရင်းကို Google Sheets သို့ အောင်မြင်စွာ သိမ်းဆည်းပြီးပါပြီ!")
@@ -104,7 +95,7 @@ if check_password():
 
     st.markdown("---")
     st.subheader("📋 ယခင်စာရင်း မှတ်တမ်းများ")
-  if not df.empty:
+    if not df.empty:
         st.dataframe(df, use_container_width=True)
     else:
-        st.info("မှတ်တမ်းများ မရှိသေးပါ။") 
+        st.info("မှတ်တမ်းများ မရှိသေးပါ။")
