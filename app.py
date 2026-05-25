@@ -4,6 +4,23 @@ from datetime import date
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 
+# --- 🔄 မြန်မာဂဏန်းများကို အင်္ဂလိပ်ဂဏန်းသို့ ပြောင်းပေးသော Function ---
+def parse_amount(val):
+    if pd.isna(val) or val == "":
+        return 0
+    val = str(val)
+    # မြန်မာဂဏန်းများကို အင်္ဂလိပ်သို့ ပြောင်းခြင်း
+    mm_nums = "၀၁၂၃၄၅၆၇၈၉"
+    en_nums = "0123456789"
+    table = str.maketrans(mm_nums, en_nums)
+    val = val.translate(table)
+    # ကော်မာ နှင့် စာသားများ ပါနေလျှင် ဖယ်ရှားခြင်း
+    val = val.replace(",", "").replace("Ks", "").replace("ကျပ်", "").strip()
+    try:
+        return float(val)
+    except:
+        return 0
+
 # --- 🔒 အပိုင်း (၁) : Login နှင့် Password စနစ် ---
 def check_password():
     def password_entered():
@@ -55,8 +72,8 @@ if check_password():
     if not df.empty:
         if "အမျိုးအစား" in df.columns and "ပမာဏ" in df.columns:
             df["အမျိုးအစား"] = df["အမျိုးအစား"].astype(str).str.strip()
-            df["ပမာဏ"] = df["ပမာဏ"].astype(str).str.replace(",", "").str.replace("Ks", "").str.strip()
-            df["ပမာဏ"] = pd.to_numeric(df["ပမာဏ"], errors="coerce").fillna(0)
+            # အထက်ပါ parse_amount စနစ်ဖြင့် ဂဏန်းများကို ရှင်းလင်းခြင်း
+            df["ပမာဏ"] = df["ပမာဏ"].apply(parse_amount)
             
             total_income = df[df["အမျိုးအစား"] == "ဝင်ငွေ"]["ပမာဏ"].sum()
             total_expense = df[df["အမျိုးအစား"] == "ထွက်ငွေ"]["ပမာဏ"].sum()
@@ -81,12 +98,15 @@ if check_password():
         t_date = st.date_input("ရက်စွဲ", date.today())
         t_type = st.selectbox("အမျိုးအစား ရွေးချယ်ပါ", ["ဝင်ငွေ", "ထွက်ငွေ"])
         desc = st.text_input("အကြောင်းအရာ (ဥပမာ - ကုန်ကြမ်းဝယ် / ပစ္စည်းရောင်းရငွေ)")
-        amount = st.number_input("ပမာဏ (ကျပ်)", min_value=0, step=1000)
+        
+        # မြန်မာဂဏန်းရော အင်္ဂလိပ်ဂဏန်းပါ ရိုက်ထည့်နိုင်ရန် Text Input အသုံးပြုထားပါသည်
+        amount_input = st.text_input("ပမာဏ (ကျပ်) - ဥပမာ: 1000 သို့မဟုတ် ၁၀၀၀")
         
         submitted = st.form_submit_button("စာရင်းသွင်းမည်")
         if submitted:
+            amount = parse_amount(amount_input)
             if desc == "" or amount <= 0:
-                st.warning("အကြောင်းအရာနှင့် ပမာဏကို ပြည့်စုံစွာ ထည့်ပါ။")
+                st.warning("အကြောင်းအရာနှင့် ပမာဏကို ပြည့်စုံစွာ ထည့်ပါ။ (ပမာဏသည် ဂဏန်းဖြစ်ရပါမည်)")
             else:
                 new_row = [str(t_date), t_type, desc, amount]
                 sheet.append_row(new_row)
@@ -96,6 +116,9 @@ if check_password():
     st.markdown("---")
     st.subheader("📋 ယခင်စာရင်း မှတ်တမ်းများ")
     if not df.empty:
-        st.dataframe(df, use_container_width=True)
+        # ဇယားတွင်ပြသမည့် ဂဏန်းများကို ကော်မာ (,) ဖြင့် ကြည့်ကောင်းအောင် ပြင်ဆင်ခြင်း
+        display_df = df.copy()
+        display_df["ပမာဏ"] = display_df["ပမာဏ"].apply(lambda x: f"{int(x):,} Ks")
+        st.dataframe(display_df, use_container_width=True)
     else:
         st.info("မှတ်တမ်းများ မရှိသေးပါ။")
