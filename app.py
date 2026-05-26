@@ -4,17 +4,32 @@ from datetime import date
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 
+# --- 🎨 ဒီဇိုင်းပိုလှစေရန် CSS ထည့်သွင်းခြင်း ---
+def local_css():
+    st.markdown("""
+    <style>
+    .metric-card {
+        background-color: #f8f9fa;
+        border-radius: 10px;
+        padding: 15px;
+        text-align: center;
+        box-shadow: 2px 2px 10px rgba(0,0,0,0.05);
+        border-left: 5px solid #1e88e5;
+    }
+    .income-card { border-left-color: #2e7d32; }
+    .expense-card { border-left-color: #d32f2f; }
+    </style>
+    """, unsafe_allow_html=True)
+
 # --- 🔄 မြန်မာဂဏန်းများကို အင်္ဂလိပ်ဂဏန်းသို့ ပြောင်းပေးသော Function ---
 def parse_amount(val):
     if pd.isna(val) or val == "":
         return 0
     val = str(val)
-    # မြန်မာဂဏန်းများကို အင်္ဂလိပ်သို့ ပြောင်းခြင်း
     mm_nums = "၀၁၂၃၄၅၆၇၈၉"
     en_nums = "0123456789"
     table = str.maketrans(mm_nums, en_nums)
     val = val.translate(table)
-    # ကော်မာ နှင့် စာသားများ ပါနေလျှင် ဖယ်ရှားခြင်း
     val = val.replace(",", "").replace("Ks", "").replace("ကျပ်", "").strip()
     try:
         return float(val)
@@ -31,11 +46,11 @@ def check_password():
             st.session_state["password_correct"] = False
 
     if "password_correct" not in st.session_state:
-        st.title("🔒 မိမိဆိုင်၏ POS စနစ်သို့ ဝင်ရောက်ရန်")
+        st.markdown("<h2 style='text-align: center; color: #1e88e5;'>🔒 မိမိဆိုင်၏ POS စနစ်သို့ ဝင်ရောက်ရန်</h2>", unsafe_allow_html=True)
         st.text_input("စကားဝှက် (Password) ရိုက်ထည့်ပါ", type="password", on_change=password_entered, key="password")
         return False
     elif not st.session_state["password_correct"]:
-        st.title("🔒 မိမိဆိုင်၏ POS စနစ်သို့ ဝင်ရောက်ရန်")
+        st.markdown("<h2 style='text-align: center; color: #1e88e5;'>🔒 မိမိဆိုင်၏ POS စနစ်သို့ ဝင်ရောက်ရန်</h2>", unsafe_allow_html=True)
         st.text_input("စကားဝှက် (Password) ရိုက်ထည့်ပါ", type="password", on_change=password_entered, key="password")
         st.error("❌ စကားဝှက် မှားယွင်းနေပါသည်။ ပြန်လည်ကြိုးစားပါ။")
         return False
@@ -43,7 +58,9 @@ def check_password():
 
 # Password မှန်ကန်မှသာ အောက်ပါ POS စနစ်ကို အလုပ်လုပ်စေမည်
 if check_password():
-    st.title("📊 နေ့စဉ် အသုံးစရိတ် POS စနစ်")
+    local_css() # CSS ကို ခေါ်သုံးပါမည်
+    st.markdown("<h1 style='text-align: center; color: #1565c0;'>📊 နေ့စဉ် အသုံးစရိတ် POS စနစ်</h1>", unsafe_allow_html=True)
+    st.markdown("<hr style='border: 2px solid #e0e0e0;'>", unsafe_allow_html=True)
 
     # --- ☁️ အပိုင်း (၂) : Google Sheets ဖြင့် ချိတ်ဆက်ခြင်း ---
     @st.cache_resource
@@ -72,7 +89,6 @@ if check_password():
     if not df.empty:
         if "အမျိုးအစား" in df.columns and "ပမာဏ" in df.columns:
             df["အမျိုးအစား"] = df["အမျိုးအစား"].astype(str).str.strip()
-            # အထက်ပါ parse_amount စနစ်ဖြင့် ဂဏန်းများကို ရှင်းလင်းခြင်း
             df["ပမာဏ"] = df["ပမာဏ"].apply(parse_amount)
             
             total_income = df[df["အမျိုးအစား"] == "ဝင်ငွေ"]["ပမာဏ"].sum()
@@ -86,20 +102,21 @@ if check_password():
         
     balance = total_income - total_expense
 
+    # --- အရောင်များဖြင့် Dashboard ကတ်များ ပြသခြင်း ---
     col1, col2, col3 = st.columns(3)
-    col1.metric("💰 ဝင်ငွေ စုစုပေါင်း", f"{int(total_income):,} Ks")
-    col2.metric("📉 ထွက်ငွေ စုစုပေါင်း", f"{int(total_expense):,} Ks")
-    col3.metric("🏦 လက်ကျန်ငွေ", f"{int(balance):,} Ks")
-    st.markdown("---")
+    col1.markdown(f"<div class='metric-card income-card'><h3 style='color: #2e7d32; margin-bottom: 0;'>💰 ဝင်ငွေ</h3><h2 style='color: #333;'>{int(total_income):,} Ks</h2></div>", unsafe_allow_html=True)
+    col2.markdown(f"<div class='metric-card expense-card'><h3 style='color: #d32f2f; margin-bottom: 0;'>📉 ထွက်ငွေ</h3><h2 style='color: #333;'>{int(total_expense):,} Ks</h2></div>", unsafe_allow_html=True)
+    col3.markdown(f"<div class='metric-card'><h3 style='color: #1e88e5; margin-bottom: 0;'>🏦 လက်ကျန်</h3><h2 style='color: #333;'>{int(balance):,} Ks</h2></div>", unsafe_allow_html=True)
+    
+    st.markdown("<br>", unsafe_allow_html=True)
 
     # --- 📝 အပိုင်း (၄) : စာရင်းအသစ် သွင်းခြင်း ---
-    st.subheader("📝 စာရင်းအသစ် ထည့်သွင်းရန်")
+    st.markdown("<h3 style='color: #e65100;'>📝 စာရင်းအသစ် ထည့်သွင်းရန်</h3>", unsafe_allow_html=True)
     with st.form("transaction_form", clear_on_submit=True):
-        t_date = st.date_input("ရက်စွဲ", date.today())
+        # နေ့-လ-နှစ် ပုံစံဖြင့် ရွေးချယ်နိုင်ရန် format="DD/MM/YYYY" ထည့်ထားပါသည်
+        t_date = st.date_input("ရက်စွဲ (နေ့-လ-နှစ်)", date.today(), format="DD/MM/YYYY")
         t_type = st.selectbox("အမျိုးအစား ရွေးချယ်ပါ", ["ဝင်ငွေ", "ထွက်ငွေ"])
         desc = st.text_input("အကြောင်းအရာ (ဥပမာ - ကုန်ကြမ်းဝယ် / ပစ္စည်းရောင်းရငွေ)")
-        
-        # မြန်မာဂဏန်းရော အင်္ဂလိပ်ဂဏန်းပါ ရိုက်ထည့်နိုင်ရန် Text Input အသုံးပြုထားပါသည်
         amount_input = st.text_input("ပမာဏ (ကျပ်) - ဥပမာ: 1000 သို့မဟုတ် ၁၀၀၀")
         
         submitted = st.form_submit_button("စာရင်းသွင်းမည်")
@@ -108,17 +125,31 @@ if check_password():
             if desc == "" or amount <= 0:
                 st.warning("အကြောင်းအရာနှင့် ပမာဏကို ပြည့်စုံစွာ ထည့်ပါ။ (ပမာဏသည် ဂဏန်းဖြစ်ရပါမည်)")
             else:
-                new_row = [str(t_date), t_type, desc, amount]
+                # မှတ်တမ်းတင်ရာတွင်လည်း နေ့-လ-နှစ် (DD-MM-YYYY) အနေဖြင့်သာ Google Sheet သို့ သိမ်းမည်
+                formatted_date = t_date.strftime("%d-%m-%Y")
+                new_row = [formatted_date, t_type, desc, amount]
                 sheet.append_row(new_row)
                 st.success("✅ စာရင်းကို Google Sheets သို့ အောင်မြင်စွာ သိမ်းဆည်းပြီးပါပြီ!")
                 st.rerun()
 
     st.markdown("---")
-    st.subheader("📋 ယခင်စာရင်း မှတ်တမ်းများ")
+    
+    # --- 📋 အပိုင်း (၅) : စာရင်းမှတ်တမ်း ဇယား (အရောင်များဖြင့်) ---
+    st.markdown("<h3 style='color: #6a1b9a;'>📋 ယခင်စာရင်း မှတ်တမ်းများ</h3>", unsafe_allow_html=True)
     if not df.empty:
-        # ဇယားတွင်ပြသမည့် ဂဏန်းများကို ကော်မာ (,) ဖြင့် ကြည့်ကောင်းအောင် ပြင်ဆင်ခြင်း
         display_df = df.copy()
         display_df["ပမာဏ"] = display_df["ပမာဏ"].apply(lambda x: f"{int(x):,} Ks")
-        st.dataframe(display_df, use_container_width=True)
+        
+        # ဝင်ငွေ၊ ထွက်ငွေ အပေါ်မူတည်၍ အရောင်ခွဲပေးမည့် Function
+        def highlight_type(val):
+            if val == 'ဝင်ငွေ':
+                return 'color: #2e7d32; font-weight: bold; background-color: #e8f5e9;' # အစိမ်းရောင်
+            elif val == 'ထွက်ငွေ':
+                return 'color: #d32f2f; font-weight: bold; background-color: #ffebee;' # အနီရောင်
+            return ''
+            
+        # ဇယားကို အရောင်ခြယ်ခြင်း (Style)
+        styled_df = display_df.style.map(highlight_type, subset=['အမျိုးအစား'])
+        st.dataframe(styled_df, use_container_width=True)
     else:
         st.info("မှတ်တမ်းများ မရှိသေးပါ။")
