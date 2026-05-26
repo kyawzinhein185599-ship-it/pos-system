@@ -154,4 +154,28 @@ if check_password():
     with st.form("transaction_form", clear_on_submit=True):
         st.date_input("ရက်စွဲ (နေ့-လ-နှစ်)", date.today(), format="DD/MM/YYYY", key="t_date")
         st.selectbox("အမျိုးအစား ရွေးချယ်ပါ", ["ဝင်ငွေ", "ထွက်ငွေ"], key="t_type")
-        st.text_input("အကြောင်းအရာ (ဥပမာ - ကုန်ကြ
+        st.text_input("အကြောင်းအရာ (ဥပမာ - ကုန်ကြမ်းဝယ် / ပစ္စည်းရောင်းရငွေ)", key="t_desc")
+        st.text_input("ပမာဏ (ကျပ်) - ဥပမာ: 1000 သို့မဟုတ် ၁၀၀၀", key="t_amount")
+        
+        # ခလုတ်နှိပ်သည်နှင့် on_click ဖြင့် handle_submit ကို ချက်ချင်း အလုပ်လုပ်စေမည်
+        st.form_submit_button("စာရင်းသွင်းမည်", on_click=handle_submit)
+
+    st.markdown("---")
+    
+    # --- 📋 အပိုင်း (၅) : စာရင်းမှတ်တမ်း ဇယား (အရောင်များဖြင့်) ---
+    st.markdown("<h3 style='color: #6a1b9a;'>📋 ယခင်စာရင်း မှတ်တမ်းများ</h3>", unsafe_allow_html=True)
+    if not df.empty:
+        display_df = df.copy()
+        display_df["ပမာဏ"] = display_df["ပမာဏ"].apply(lambda x: f"{int(x):,} Ks")
+        
+        def highlight_type(val):
+            if val == 'ဝင်ငွေ':
+                return 'color: #2e7d32; font-weight: bold; background-color: #e8f5e9;' 
+            elif val == 'ထွက်ငွေ':
+                return 'color: #d32f2f; font-weight: bold; background-color: #ffebee;' 
+            return ''
+            
+        styled_df = display_df.style.map(highlight_type, subset=['အမျိုးအစား'])
+        st.dataframe(styled_df, use_container_width=True)
+    else:
+        st.info("မှတ်တမ်းများ မရှိသေးပါ။")
