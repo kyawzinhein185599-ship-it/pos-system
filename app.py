@@ -82,6 +82,7 @@ if check_password():
         st.stop()
 
     # --- 📈 အပိုင်း (၃) : တွက်ချက်ခြင်း နှင့် Dashboard ပြသခြင်း ---
+    # ဤနေရာတွင် st.cache ကို မသုံးပါ (ချက်ချင်း Update ဖြစ်စေရန်)
     def load_data():
         records = sheet.get_all_records(value_render_option="UNFORMATTED_VALUE")
         return pd.DataFrame(records)
@@ -113,29 +114,30 @@ if check_password():
     # --- 📝 အပိုင်း (၄) : စာရင်းအသစ် သွင်းခြင်း ---
     st.markdown("<h3 style='color: #e65100;'>📝 စာရင်းအသစ် ထည့်သွင်းရန်</h3>", unsafe_allow_html=True)
 
-    with st.form("transaction_form", clear_on_submit=True):
-        # နေ့-လ-နှစ် ပုံစံဖြင့်သာ ရွေးချယ်နိုင်အောင် လုပ်ထားပါသည်
+    # st.form အစား ရိုးရိုး input ကိုသုံး၍ Update ပြဿနာကို ဖြေရှင်းထားပါသည်
+    col_input1, col_input2 = st.columns(2)
+    with col_input1:
         t_date = st.date_input("ရက်စွဲ (နေ့-လ-နှစ်)", date.today(), format="DD/MM/YYYY")
         t_type = st.selectbox("အမျိုးအစား ရွေးချယ်ပါ", ["ဝင်ငွေ", "ထွက်ငွေ"])
+    with col_input2:
         desc = st.text_input("အကြောင်းအရာ (ဥပမာ - ကုန်ကြမ်းဝယ် / ပစ္စည်းရောင်းရငွေ)")
         amount_input = st.text_input("ပမာဏ (ကျပ်) - ဥပမာ: 1000 သို့မဟုတ် ၁၀၀၀")
-        
-        submitted = st.form_submit_button("စာရင်းသွင်းမည်")
-        
-        if submitted:
-            amount = parse_amount(amount_input)
-            if desc == "" or amount <= 0:
-                st.warning("⚠️ အကြောင်းအရာနှင့် ပမာဏကို ပြည့်စုံစွာ ထည့်ပါ။ (ပမာဏသည် ဂဏန်းဖြစ်ရပါမည်)")
-            else:
-                # နေ့-လ-နှစ် အတိအကျဖြင့်သာ သိမ်းဆည်းမည်
-                formatted_date = t_date.strftime("%d-%m-%Y")
-                new_row = [formatted_date, t_type, desc, amount]
+
+    if st.button("စာရင်းသွင်းမည်"):
+        amount = parse_amount(amount_input)
+        if desc == "" or amount <= 0:
+            st.warning("⚠️ အကြောင်းအရာနှင့် ပမာဏကို ပြည့်စုံစွာ ထည့်ပါ။ (ပမာဏသည် ဂဏန်းဖြစ်ရပါမည်)")
+        else:
+            formatted_date = t_date.strftime("%d-%m-%Y")
+            new_row = [formatted_date, t_type, desc, amount]
+            
+            with st.spinner('သိမ်းဆည်းနေပါသည်...'):
                 sheet.append_row(new_row)
-                
-                st.success("✅ စာရင်းကို အောင်မြင်စွာ သိမ်းဆည်းပြီးပါပြီ! (ခဏစောင့်ပါ...)")
-                # Data ချက်ချင်း Up-to-date ဖြစ်စေရန် ၁.၅ စက္ကန့် စောင့်ပြီး App ကို Refresh လုပ်ပါမည်
-                time.sleep(1.5)
-                st.rerun()
+                time.sleep(1.5) # Google Sheet API Update ဖြစ်ရန် အနည်းငယ်စောင့်ပါမည်
+            
+            st.success("✅ စာရင်းကို အောင်မြင်စွာ သိမ်းဆည်းပြီးပါပြီ!")
+            time.sleep(0.5)
+            st.rerun() # စာမျက်နှာကို ချက်ချင်း Refresh လုပ်ပါမည်
 
     st.markdown("---")
     
@@ -145,7 +147,6 @@ if check_password():
         display_df = df.copy()
         display_df["ပမာဏ"] = display_df["ပမာဏ"].apply(lambda x: f"{int(x):,} Ks")
         
-        # ဝင်ငွေ၊ ထွက်ငွေ အရောင်ခွဲခြားမည့် Function
         def highlight_type(val):
             if val == 'ဝင်ငွေ':
                 return 'color: #2e7d32; font-weight: bold; background-color: #e8f5e9;' 
@@ -153,7 +154,6 @@ if check_password():
                 return 'color: #d32f2f; font-weight: bold; background-color: #ffebee;' 
             return ''
             
-        # ဇယားကို အရောင်များဖြင့် ဖော်ပြခြင်း
         styled_df = display_df.style.map(highlight_type, subset=['အမျိုးအစား'])
         st.dataframe(styled_df, use_container_width=True)
     else:
